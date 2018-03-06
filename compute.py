@@ -3,7 +3,7 @@ from math import exp, sinh, cosh, tan, atan
 from scipy import constants
 from scipy import integrate
 from netCDF4 import Dataset
-
+import pandas as pd
 
 # all the VSS elastic collision data is here
 
@@ -78,6 +78,9 @@ for p1 in masses:
 
 def Zv(Tv, vibr_spectrum):
     return np.sum(np.exp(-vibr_spectrum / (constants.k * Tv)))
+
+def c_vibr(Tv, vibr_spectrum):
+    return 1.0
 
 def cs_vss(g, dref, gref, omega):
     """
@@ -214,41 +217,53 @@ def make_harmonic_spectrum(theta_v, theta_D):
     """
     return constants.k * np.arange(0, theta_D - theta_v / 2, theta_v)
 
-def compute(molecules, partners, T_min=200., T_max=25000., Tv_min=200., Tv_max=25000., dT=100., output=True):
-    result = []
+def compute(molecules, partners, T_min=200., T_max=25000., Tv_min=200., Tv_max=25000., dT=100., output=True,
+            integral_only=True, p=101325):
+    result = {}
     T_arr = np.linspace(T_min, T_max, 1 + int((T_max - T_min) / dT))
     Tv_arr = np.linspace(Tv_min, Tv_max, 1 + int((Tv_max - Tv_min) / dT))
-
-    # molecules = ['N2', 'O2', 'NO']
-    # partners = ['N2', 'O2', 'NO', 'N', 'O']
 
     for mol in molecules:
          v_spectrum = make_harmonic_spectrum(mol_data[mol]['theta_v'], mol_data[mol]['theta_D'])
             print(mol, v_spectrum[-1], v_spectrum.shape[0], Zv(30000, v_spectrum))  # TODO remove
 
     for mol in molecules:
-        name = mol
         v_spectrum = make_harmonic_spectrum(mol_data[mol]['theta_v'], mol_data[mol]['theta_D'])
         for p in partners:
             res = np.zeros((T_arr.shape[0], Tv_arr.shape[0]))
             for i, T in enumerate(T_arr):
                 for j, Tv in enumerate(Tv_arr):
-                    tmp = VT_integral(T, Tv, v_spectrum, FHO_data[name + '+' + p]['beta'],
-                                      vss_data[name + '+' + p]['dref'],
-                                      vss_data[name + '+' + p]['omega'],
-                                      red_masses[name + '+' + p], mol_data[mol]['osc_mass'],
-                                      ram_masses[name][0], ram_masses[name][1],
-                                      FHO_data[name + '+' + p]['E_Morse'], 273)
+                    tmp = VT_integral(T, Tv, v_spectrum, FHO_data[mol + '+' + p]['beta'],
+                                      vss_data[mol + '+' + p]['dref'],
+                                      vss_data[mol + '+' + p]['omega'],
+                                      red_masses[mol + '+' + p], mol_data[mol]['osc_mass'],
+                                      ram_masses[mol][0], ram_masses[mol][1],
+                                      FHO_data[mol + '+' + p]['E_Morse'], 273)
+                    if not integral_only:
+                        # if we return the whole relaxation time computed at a pressure of p Pa
+                        tmp *= 4 * p / T / (masses['mol'] * c_vibr(Tv, vibr_spectrum))
+                        tmp = 1. / tmp
+
                     res[i, j] = tmp
-            result.append(res)
+            result[mol + ',' + p] = np.copy(res)
             if output:
-                print(mol.name, p, res[0, 0], res[-1, -1])
+                print(mol, p, res[0, 0], res[-1, -1])
     return result
 
-def write_csv(filename_prefix, molecules, partners, result):
-    pass
+def write_csv(filename_prefix, molecules, partners, result, delimiter=",",
+              T_min=200., T_max=25000., Tv_min=200., Tv_max=25000., dT=100.):
 
-def write_netcdf(filename, result, format="NETCDF4_CLASSIC", T_min=200., T_max=25000., Tv_min=200., Tv_max=25000., dT=100.):
+    header = "Temperature varies across rows, vib. temperature varies across columns, T_min=" + str(T_min)
+    header += ", T_max=" + str(T_max) + ", Tv_min=" + str(Tv_min) + ", Tv_max=" + str(Tv_max) + ", dT=" + str(dT)
+    for mol in molecules:
+        for p in partners:
+            output = {}
+            np.savetxt('_'.join((filename_prefix, mol, p)), result[mol + ',' + p], delimiter=delimiter, newline='\n',
+                       header=header)
+
+
+def write_netcdf(filename, molecules, partners, result, format="NETCDF4_CLASSIC",
+                 T_min=200., T_max=25000., Tv_min=200., Tv_max=25000., dT=100.):
     rootgrp = Dataset(filename, "w", format=format)
     rootgrp.createDimension("VT_data_nx", T_arr.shape[0])
     rootgrp.createDimension("VT_data_ny", Tv_arr.shape[0])
@@ -260,9 +275,8 @@ def write_netcdf(filename, result, format="NETCDF4_CLASSIC", T_min=200., T_max=2
     rootgrp.VT_data_dy = dT
 
     for mol in molecules:
-        name = mol
-        v_spectrum = make_harmonic_spectrum(mol_data[mol]['theta_v'], mol_data[mol]['theta_D'])
-            vars_list = rootgrp.createVariable('VT_integral_table_' + mol.name + '_' + p, 'f8',
+        for p in partners:
+            vars_list = rootgrp.createVariable('VT_integral_table_' + mol + '_' + p, 'f8',
                                                ('VT_data_nx', 'VT_data_ny'))
-            vars_list[:] = result['mol']
+            vars_list[:] = result[mol + ',' + p]
     rootgrp.close()
