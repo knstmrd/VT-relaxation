@@ -4,6 +4,7 @@ from scipy import constants
 from scipy import integrate
 from netCDF4 import Dataset
 import pandas as pd
+import argparse
 
 # all the VSS elastic collision data is here
 
@@ -280,3 +281,32 @@ def write_netcdf(filename, molecules, partners, result, format="NETCDF4_CLASSIC"
                                                ('VT_data_nx', 'VT_data_ny'))
             vars_list[:] = result[mol + ',' + p]
     rootgrp.close()
+
+
+def main():
+    parser = argparse.ArgumentParser(description='VT relaxation types calculation')
+    parser.add_argument('-t','--outputfiletype' ,type=str, default='netCDF4',help="Output filetype: CSV or netCDF4")
+    parser.add_argument('-f','--outputfilename', type=str, default='VT_times_', help="Output filename (or prefix in case of CSV files)")
+    parser.add_argument('-o','--outputfileformat', type=str, default='NETCDF4_CLASSIC',
+                        help='For netCDF4 output, specifies output format, for CSV, specifies delimiter')
+    parser.add_arguent('--temperaturemin', type=float, default=100.0, help='Minimum temperature')
+    parser.add_arguent('--vtemperaturemin', type=float, default=100.0, help='Minimum vibrational temperature')
+    parser.add_arguent('--temperaturemax', type=float, default=25000.0, help='Maximum temperature')
+    parser.add_arguent('--vtemperaturemax', type=float, default=25000.0, help='Maximum vibrational temperature')
+    parser.add_arguent('--dt', type=float, default=100.0, help='Temperature step size')
+    parser.add_argument('--verbose', type=str, default="true",
+                        help="If set to true (default value), will enable some output during computation")
+    parser.add_argument('--integral_only', type=str, default="true",
+                        help="If set to true (default value), will compute only averaging operator and not the full relaxation time")
+    parser.add_argument('--pressure', type=float, default=101325,
+                        help="If integral_only is not true, this will specify the pressure" +
+                        " in Pascals at which the relaxation times are computed")
+    parser.add_argument('--molecules', type=str, default="N2,O2,NO",
+                        help="Comma-separated names of molecules for which the VT relaxation times are computed")
+    parser.add_argument('--partner', type=str, default="N2,O2,NO,N,O",
+                        help="Comma-separated names of particles, possible collision partners")
+    args = parser.parse_args()
+
+
+if name == "__main__":
+    main()
