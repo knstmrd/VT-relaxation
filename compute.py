@@ -149,7 +149,8 @@ def vt_prob_g_only_fho(g: float, mass: float, beta: float, osc_mass: float,
                        ve_before: float, ve_after: float, i: int, delta: int, 
                        ram1, ram2, E_Morse, this_svt) -> float:
     """
-    Compute VT transition probability. For heteronuclear molecules, compute 2 probabilities and take the average
+    Compute velocity-dependent part of
+    VT transition probability, for heteronuclear molecules, compute 2 probabilities and take the average
     """
     if ram1 == ram2:
         return vt_prob_g_only_fho_12(g, mass, beta, osc_mass, ve_before, ve_after, i, delta, ram1, E_Morse, this_svt)
@@ -196,15 +197,14 @@ def VT_integral(T, Tv, vibr_spectrum, beta, dref, omega, coll_mass, osc_mass,
     dEsq = ((vibr_spectrum[1] - vibr_spectrum[0]) / (constants.k * T))**2
     rev_k_mult = exp((vibr_spectrum[0] - vibr_spectrum[1]) / (constants.k * T))
     kTv = constants.k * Tv
-    for i in range(vibr_spectrum.shape[0]):
-        # transition from level i+1 to level i
+    for i in range(vibr_spectrum.shape[0]-1):
         vtr = vt_rate_fho(T, beta, dref, omega, coll_mass, osc_mass,
                           vibr_spectrum[i + 1], vibr_spectrum[i], i+1, -1, ram1, ram2, E_Morse, Tref, this_svt)
         tmp = dEsq * exp(-vibr_spectrum[i+1] / kTv)
         tmp *= vtr
         res += tmp
                 
-        # transition from level i to level i+1, computed via detailed balance
+        # v -> v + 1
         tmp = dEsq * exp(-vibr_spectrum[i]  / kTv)
         tmp *= vtr * rev_k_mult
         res += tmp
@@ -223,10 +223,16 @@ def compute(molecules, partners, T_min=200., T_max=25000., Tv_min=200., Tv_max=2
     result = {}
     T_arr = np.linspace(T_min, T_max, 1 + int((T_max - T_min) / dT))
     Tv_arr = np.linspace(Tv_min, Tv_max, 1 + int((Tv_max - Tv_min) / dT))
+    result['__T_points'] = T_arr.shape[0]
+    result['__Tv_points'] = Tv_arr.shape[0]
+
+    if output:
+        print(' '.join((str(len(molecules)), 'molecules,', str(len(partners)), 'interaction partners for each molecule')))
+        print(' '.join((str(T_arr.shape[0] * Tv_arr.shape[0]), 'points for each interaction')))
 
     for mol in molecules:
-         v_spectrum = make_harmonic_spectrum(mol_data[mol]['theta_v'], mol_data[mol]['theta_D'])
-            print(mol, v_spectrum[-1], v_spectrum.shape[0], Zv(30000, v_spectrum))  # TODO remove
+        v_spectrum = make_harmonic_spectrum(mol_data[mol]['theta_v'], mol_data[mol]['theta_D'])
+        print(mol, v_spectrum[-1], v_spectrum.shape[0], Zv(30000, v_spectrum))  # TODO remove
 
     for mol in molecules:
         v_spectrum = make_harmonic_spectrum(mol_data[mol]['theta_v'], mol_data[mol]['theta_D'])
@@ -249,6 +255,7 @@ def compute(molecules, partners, T_min=200., T_max=25000., Tv_min=200., Tv_max=2
             result[mol + ',' + p] = np.copy(res)
             if output:
                 print(mol, p, res[0, 0], res[-1, -1])
+
     return result
 
 def write_csv(filename_prefix, molecules, partners, result, delimiter=",",
@@ -259,15 +266,17 @@ def write_csv(filename_prefix, molecules, partners, result, delimiter=",",
     for mol in molecules:
         for p in partners:
             output = {}
-            np.savetxt('_'.join((filename_prefix, mol, p)), result[mol + ',' + p], delimiter=delimiter, newline='\n',
+            np.savetxt('_'.join((filename_prefix, mol, p)) + '.csv', result[mol + ',' + p], delimiter=delimiter, newline='\n',
                        header=header)
 
 
 def write_netcdf(filename, molecules, partners, result, format="NETCDF4_CLASSIC",
                  T_min=200., T_max=25000., Tv_min=200., Tv_max=25000., dT=100.):
-    rootgrp = Dataset(filename, "w", format=format)
-    rootgrp.createDimension("VT_data_nx", T_arr.shape[0])
-    rootgrp.createDimension("VT_data_ny", Tv_arr.shape[0])
+    rootgrp = Dataset(filename + '.cdf', "w", format=format)
+    T_arr = np.linspace(T_min, T_max, 1 + int((T_max - T_min) / dT))
+    Tv_arr = np.linspace(Tv_min, Tv_max, 1 + int((Tv_max - Tv_min) / dT))
+    rootgrp.createDimension("VT_data_nx", result['__T_points'])
+    rootgrp.createDimension("VT_data_ny", result['__Tv_points'])
     rootgrp.VT_data_x_min = T_min
     rootgrp.VT_data_x_max = T_max
     rootgrp.VT_data_y_min = Tv_min
@@ -285,15 +294,21 @@ def write_netcdf(filename, molecules, partners, result, format="NETCDF4_CLASSIC"
 
 def main():
     parser = argparse.ArgumentParser(description='VT relaxation types calculation')
-    parser.add_argument('-t','--outputfiletype' ,type=str, default='netCDF4',help="Output filetype: CSV or netCDF4")
-    parser.add_argument('-f','--outputfilename', type=str, default='VT_times_', help="Output filename (or prefix in case of CSV files)")
-    parser.add_argument('-o','--outputfileformat', type=str, default='NETCDF4_CLASSIC',
-                        help='For netCDF4 output, specifies output format, for CSV, specifies delimiter')
-    parser.add_arguent('--temperaturemin', type=float, default=100.0, help='Minimum temperature')
-    parser.add_arguent('--vtemperaturemin', type=float, default=100.0, help='Minimum vibrational temperature')
-    parser.add_arguent('--temperaturemax', type=float, default=25000.0, help='Maximum temperature')
-    parser.add_arguent('--vtemperaturemax', type=float, default=25000.0, help='Maximum vibrational temperature')
-    parser.add_arguent('--dt', type=float, default=100.0, help='Temperature step size')
+    parser.add_argument('-t','--outputfiletype' ,type=str, default='NETCDF4',help="Output filetype: CSV or NETCDF4")
+    parser.add_argument('-f','--outputfilename', type=str, default='VT_times', help="Output filename (or prefix in case of CSV files)")
+    parser.add_argument('--cdfoutputfileformat', type=str, default='NETCDF4_CLASSIC',
+                        help='For netCDF4 output, specifies output')
+    parser.add_argument('--delimiter', type=str, default=',',
+                        help='For CSV output, specifies delimiter')
+    parser.add_argument('--molecules', type=str, default="N2,O2,NO",
+                        help="Comma-separated names of molecules for which the VT relaxation times are computed")
+    parser.add_argument('--partners', type=str, default="N2,O2,NO,N,O",
+                        help="Comma-separated names of particles, possible collision partners")
+    parser.add_argument('--temperaturemin', type=float, default=200.0, help='Minimum temperature')
+    parser.add_argument('--temperaturemax', type=float, default=25000.0, help='Maximum temperature')
+    parser.add_argument('--vtemperaturemin', type=float, default=200.0, help='Minimum vibrational temperature')
+    parser.add_argument('--vtemperaturemax', type=float, default=25000.0, help='Maximum vibrational temperature')
+    parser.add_argument('--dt', type=float, default=100.0, help='Temperature step size')
     parser.add_argument('--verbose', type=str, default="true",
                         help="If set to true (default value), will enable some output during computation")
     parser.add_argument('--integral_only', type=str, default="true",
@@ -301,12 +316,30 @@ def main():
     parser.add_argument('--pressure', type=float, default=101325,
                         help="If integral_only is not true, this will specify the pressure" +
                         " in Pascals at which the relaxation times are computed")
-    parser.add_argument('--molecules', type=str, default="N2,O2,NO",
-                        help="Comma-separated names of molecules for which the VT relaxation times are computed")
-    parser.add_argument('--partner', type=str, default="N2,O2,NO,N,O",
-                        help="Comma-separated names of particles, possible collision partners")
     args = parser.parse_args()
+    print(args)
 
+    molecules = args.molecules.split(',')
+    partners = args.partners.split(',')
+    verbose_output = False
+    integral_only = False
+    if args.verbose == "true":
+        verbose_output = True
+    if args.integral_only == "true":
+        integral_only = True
 
-if name == "__main__":
+    res = compute(molecules, partners, T_min=args.temperaturemin, T_max=args.temperaturemax,
+                  Tv_min=args.vtemperaturemin, Tv_max=args.vtemperaturemax, dT=args.dt, output=verbose_output,
+                  integral_only=integral_only, p=args.pressure)
+
+    if args.outputfiletype == "NETCDF4":
+        write_netcdf(args.outputfilename, molecules, partners, res, args.cdfoutputfileformat,
+                     T_min=args.temperaturemin, T_max=args.temperaturemax,
+                     Tv_min=args.vtemperaturemin, Tv_max=args.vtemperaturemax, dT=args.dt)
+    else:
+        write_csv(args.outputfilename, molecules, partners, res, args.delimiter,
+                  T_min=args.temperaturemin, T_max=args.temperaturemax,
+                  Tv_min=args.vtemperaturemin, Tv_max=args.vtemperaturemax, dT=args.dt)
+
+if __name__ == "__main__":
     main()
