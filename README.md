@@ -2,9 +2,13 @@
 
 Python code to compute VT relaxation times using a kinetic theory based definition, as developed in [Kustova, E. V., and G. P. Oblapenko. "Mutual effect of vibrational relaxation and chemical reactions in viscous multitemperature flows." Physical Review E, 2016](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.93.033127)
 
-More specifically, it computes the either the averaging operator over all possible one-quantum VT transitions using the [Forced Harmonic Oscillator model](https://arc.aiaa.org/doi/abs/10.2514/2.6302) and the [Variable Soft Sphere model with recent collision parameters](https://aip.scitation.org/doi/abs/10.1063/1.4939719) to calculate the transition cross-section.
+More specifically, it computes the either the averaging operator over all possible one-quantum VT transitions using the [Forced Harmonic Oscillator model](https://arc.aiaa.org/doi/abs/10.2514/2.6302) and the [Variable Soft Sphere model with recent collision parameters](https://aip.scitation.org/doi/abs/10.1063/1.4939719) to calculate the transition cross-sections.
 
-The code can compute either the averaging operator, or the full relaxation time (at a specified pressure), defined as
+The code can compute either the averaging operator `avg_E_vibr`, or the full relaxation time `t` (at a specified pressure), defined as
+
+`t = m * c_vibr / (4 * k * n * avg_E_vibr)`,
+
+where `m` is the relaxating molecules mass, `k` is the Boltzmann constant, `n` is the number density, `c_vibr` is the specific heat of vibrational degrees of freedom.
 
 # Usage
 
@@ -14,7 +18,9 @@ The code requires Python 3, the netCDF4 library, numpy and scipy.
 To install the pre-requisites:
 
 `pip install netCDF4`
+
 `pip install numpy`
+
 `pip install scipy`
 
 
