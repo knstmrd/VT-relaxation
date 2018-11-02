@@ -273,9 +273,6 @@ def compute(molecules, partners, T_min=200., T_max=25000., Tv_min=200., Tv_max=2
 
     for mol in molecules:
         v_spectrum = make_harmonic_spectrum(mol_data[mol]['theta_v'], mol_data[mol]['theta_D'])
-
-    for mol in molecules:
-        v_spectrum = make_harmonic_spectrum(mol_data[mol]['theta_v'], mol_data[mol]['theta_D'])
         for p in partners:
             res = np.zeros((T_arr.shape[0], Tv_arr.shape[0]))
             for i, T in enumerate(T_arr):
