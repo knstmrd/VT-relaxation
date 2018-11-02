@@ -330,7 +330,7 @@ def write_netcdf(filename, molecules, partners, result, format="NETCDF4_CLASSIC"
 def main():
     parser = argparse.ArgumentParser(description='VT relaxation types calculation')
     parser.add_argument('-t','--outputfiletype' ,type=str, default='NETCDF4',
-                        help='Output filetype: CSV or NETCDF4 (default is "NETCDF4"')
+                        help='Output filetype: CSV or NETCDF4 (default is "NETCDF4")')
     parser.add_argument('-f','--outputfilename', type=str, default='VT_times', help="Output filename (or prefix in case of CSV files)")
     parser.add_argument('--cdfoutputfileformat', type=str, default='NETCDF4_CLASSIC',
                         help='For netCDF4 output, specifies output (default is "NETCDF4_CLASSIC")')
