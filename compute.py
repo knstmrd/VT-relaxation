@@ -155,7 +155,8 @@ def vt_prob_g_only_fho_12(g: float, mass: float, beta: float, osc_mass: float,
                           ve_before: float, ve_after: float, i: int, delta: int,
                           ram, E_Morse, this_svt) -> float:
     """
-    Compute the VT transition probability
+    Compute the VT transition probability; there is an additional multiplier missing here!
+    It is moved outside to vt_rate, so that we do less FLOPs inside the integration routine
     """
     res = 0.
 
