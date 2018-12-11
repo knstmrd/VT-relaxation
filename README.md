@@ -1,6 +1,6 @@
 # VT relaxation time computation
 
-Python code to compute VT relaxation times using a kinetic theory based definition, as developed in [Kustova, E. V., and G. P. Oblapenko. "Mutual effect of vibrational relaxation and chemical reactions in viscous multitemperature flows." Physical Review E, 2016](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.93.033127)
+Python code to compute VT relaxation times using a kinetic theory based definition, as developed in [Kustova, E. V., and G. P. Oblapenko. "Mutual effect of vibrational relaxation and chemical reactions in viscous multitemperature flows." Physical Review E, 2016](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.93.033127) and [G. P. Oblapenko. "Calculation of Vibrational Relaxation Times Using a Kinetic Theory Approach." The Journal of Physical Chemistry A, 2018](http://doi.org/10.1021/acs.jpca.8b09897).
 
 More specifically, it computes the either the averaging operator over all possible one-quantum VT transitions using the [Forced Harmonic Oscillator model](https://arc.aiaa.org/doi/abs/10.2514/2.6302) and the [Variable Soft Sphere model with recent collision parameters](https://aip.scitation.org/doi/abs/10.1063/1.4939719) to calculate the transition cross-sections.
 
@@ -44,3 +44,7 @@ optional arguments:
 - `--pressure PRESSURE` If integral_only is not true, this will specify the pressure in Pascals at which the relaxation times are computed (default is 101325 Pa)
 
 # Citing
+
+Oblapenko, G. P. Calculation of Vibrational Relaxation Times Using a Kinetic Theory Approach. The Journal of Physical Chemistry A, 2018. http://doi.org/10.1021/acs.jpca.8b09897
+
+Kustova, E. V., and G. P. Oblapenko. Mutual effect of vibrational relaxation and chemical reactions in viscous multitemperature flows. Physical Review E, 2016. https://journals.aps.org/pre/abstract/10.1103/PhysRevE.93.033127
