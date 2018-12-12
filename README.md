@@ -17,12 +17,13 @@ The code requires Python 3, the netCDF4 library, numpy and scipy.
 
 To install the pre-requisites:
 
-`pip install netCDF4`
-
 `pip install numpy`
 
 `pip install scipy`
 
+`pip install netCDF4`
+
+Another option is to use the [Anaconda distribution](https://www.anaconda.com/download/), and install netCDF4 via `conda install netcdf4`.
 
 The script can be run with the following optional arguments:
 
